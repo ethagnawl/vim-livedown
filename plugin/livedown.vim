@@ -14,13 +14,24 @@ if !exists('g:livedown_port')
   let g:livedown_port = 1337
 endif
 
-if !exists('g:livedown_command')
-  " Check if livedown is available globally
-  let g:livedown_command = 'livedown'
-  if !executable(g:livedown_command)
-    " Lastly, try local livedown installation relative to plugin
-    let g:livedown_command = expand('<sfile>:h') . '/../node_modules/.bin/livedown'
+function SetLivedownCommandGlobalVariable()
+  let l:global_livedown = 'livedown'
+  let l:local_livedown_legacy = expand('<sfile>:h') . '/../node_modules/.bin/livedown'
+  let l:local_livedown_modern = expand('<sfile>:h') . '/../node_modules/bin/livedown'
+
+  if executable(l:global_livedown)
+    let g:livedown_command = l:global_livedown
+  elseif executable(l:local_livedown_legacy)
+    let g:livedown_command = l:local_livedown_legacy
+  elseif executable(l:local_livedown_modern)
+    let g:livedown_command = l:local_livedown_modern
+  else
+    let g:livedown_command = ''
   endif
+endfunction
+
+if !exists('g:livedown_command')
+  call SetLivedownCommandGlobalVariable()
 endif
 
 function! s:LivedownBrowser()
@@ -34,6 +45,12 @@ function! s:LivedownBrowser()
 endfunction
 
 function! s:LivedownRun(command)
+  if (g:livedown_command == '')
+    echoerr 'Unable to find livedown executable.
+\ You can install it using: npm install -g livedown'
+    return 0
+  endif
+
   let l:platform_command = has('win32') ?
     \ "start /B " . a:command :
     \ a:command . " &"
